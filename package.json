@@ -1,0 +1,16 @@
+{
+  "name": "proofmeet-backend",
+  "version": "1.0.0",
+  "description": "ProofMeet Backend API - Railway Deployment",
+  "main": "simple-server.js",
+  "scripts": {
+    "start": "node simple-server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}

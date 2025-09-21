@@ -8,7 +8,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://proof-meet-frontend.vercel.app'
+    'https://proof-meet-frontend.vercel.app',
+    'https://proof-meet-frontend-ixfekv3a7-leon-de-langes-projects.vercel.app'
   ],
   credentials: true
 }));

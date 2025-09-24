@@ -41,6 +41,11 @@ app.post('/api/webhooks/zoom', (req, res) => {
     
     // Handle different event types
     switch (event.event) {
+      case 'endpoint.url_validation':
+        console.log('✅ Zoom endpoint validation successful');
+        // For validation events, we just need to respond with 200
+        break;
+        
       case 'meeting.started':
         console.log('🟢 Meeting started:', event.payload?.object?.id);
         break;

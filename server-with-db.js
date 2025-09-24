@@ -57,9 +57,10 @@ app.post('/api/webhooks/zoom', (req, res) => {
         const plainToken = event.payload?.plainToken;
         if (plainToken) {
           console.log('📤 Responding with plainToken:', plainToken);
-          // Try different response formats that Zoom might expect
-          res.set('Content-Type', 'application/json');
-          return res.status(200).send(plainToken); // Some apps expect just the token as string
+          // Try the exact format Zoom documentation specifies
+          return res.status(200).json({
+            plainToken: plainToken
+          });
         }
         break;
         

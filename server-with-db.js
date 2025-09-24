@@ -1,10 +1,84 @@
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
+const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const prisma = new PrismaClient();
+
+// Zoom API Configuration
+const ZOOM_CONFIG = {
+  ACCOUNT_ID: 'csxjpAf5Ruml6T-ol_hJBQ',
+  CLIENT_ID: 'Xyt7NChhTe679v_P865ktw',
+  CLIENT_SECRET: 'w4Jerea8ifg8tafDYlq2jBKAh8v0j5eY',
+  API_BASE_URL: 'https://api.zoom.us/v2'
+};
+
+// Generate Zoom API Access Token
+async function getZoomAccessToken() {
+  try {
+    const response = await axios.post('https://zoom.us/oauth/token', 
+      new URLSearchParams({
+        'grant_type': 'account_credentials',
+        'account_id': ZOOM_CONFIG.ACCOUNT_ID
+      }), {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${ZOOM_CONFIG.CLIENT_ID}:${ZOOM_CONFIG.CLIENT_SECRET}`).toString('base64')}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
+    
+    console.log('✅ Zoom access token obtained successfully');
+    return response.data.access_token;
+  } catch (error) {
+    console.error('❌ Failed to get Zoom access token:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Create Zoom Meeting
+async function createZoomMeeting(meetingData) {
+  try {
+    const accessToken = await getZoomAccessToken();
+    
+    const meetingConfig = {
+      topic: meetingData.title,
+      type: 2, // Scheduled meeting
+      start_time: meetingData.scheduledFor,
+      duration: meetingData.duration,
+      timezone: 'UTC',
+      settings: {
+        host_video: true,
+        participant_video: true,
+        join_before_host: false,
+        mute_upon_entry: true,
+        waiting_room: true,
+        audio: 'both',
+        auto_recording: 'none'
+      }
+    };
+    
+    const response = await axios.post(
+      `${ZOOM_CONFIG.API_BASE_URL}/users/me/meetings`,
+      meetingConfig,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    console.log('✅ Zoom meeting created successfully:', response.data.id);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Failed to create Zoom meeting:', error.response?.data || error.message);
+    throw error;
+  }
+}
 
 // Middleware
 app.use(cors({
@@ -240,6 +314,158 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Login failed'
+    });
+  }
+});
+
+// Create meeting endpoint
+app.post('/api/meetings/create', async (req, res) => {
+  try {
+    const { title, description, scheduledFor, duration } = req.body;
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    // Get user from token (simplified for now)
+    const authToken = await prisma.authToken.findUnique({
+      where: { token },
+      include: { user: true }
+    });
+    
+    if (!authToken || !authToken.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid authentication token'
+      });
+    }
+    
+    if (!authToken.user.isHost) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only hosts can create meetings'
+      });
+    }
+    
+    // Create Zoom meeting
+    const zoomMeeting = await createZoomMeeting({
+      title,
+      scheduledFor,
+      duration
+    });
+    
+    // Save meeting to database
+    const meeting = await prisma.meeting.create({
+      data: {
+        title,
+        description: description || '',
+        scheduledFor: new Date(scheduledFor),
+        duration: parseInt(duration),
+        hostId: authToken.user.id,
+        zoomMeetingId: zoomMeeting.id.toString(),
+        zoomJoinUrl: zoomMeeting.join_url,
+        isActive: true
+      }
+    });
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        meetingId: meeting.id,
+        zoomMeetingId: meeting.zoomMeetingId,
+        joinUrl: meeting.zoomJoinUrl,
+        title: meeting.title,
+        scheduledFor: meeting.scheduledFor,
+        duration: meeting.duration
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error creating meeting:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create meeting'
+    });
+  }
+});
+
+// Get meetings for a host
+app.get('/api/meetings/host/:hostId', async (req, res) => {
+  try {
+    const { hostId } = req.params;
+    const { page = 1, limit = 10, status = 'active' } = req.query;
+    
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        hostId,
+        isActive: status === 'active'
+      },
+      include: {
+        host: {
+          select: { email: true, courtId: true }
+        },
+        attendanceRecords: {
+          include: {
+            user: {
+              select: { email: true }
+            }
+          }
+        }
+      },
+      orderBy: {
+        scheduledFor: 'desc'
+      },
+      skip: (page - 1) * limit,
+      take: parseInt(limit)
+    });
+    
+    res.json({
+      success: true,
+      data: meetings,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: meetings.length
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching meetings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch meetings'
+    });
+  }
+});
+
+// Test Zoom API connection
+app.get('/api/zoom/test', async (req, res) => {
+  try {
+    const accessToken = await getZoomAccessToken();
+    
+    // Test API call to get user info
+    const response = await axios.get(
+      `${ZOOM_CONFIG.API_BASE_URL}/users/me`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    res.json({
+      success: true,
+      message: 'Zoom API connection successful',
+      data: {
+        userEmail: response.data.email,
+        accountId: response.data.account_id,
+        status: 'Connected'
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Zoom API test failed:', error.response?.data || error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Zoom API connection failed',
+      details: error.response?.data || error.message
     });
   }
 });

@@ -34,7 +34,14 @@ async function getZoomAccessToken() {
     console.log('✅ Zoom access token obtained successfully');
     return response.data.access_token;
   } catch (error) {
-    console.error('❌ Failed to get Zoom access token:', error.response?.data || error.message);
+    console.error('❌ Failed to get Zoom access token:');
+    console.error('Status:', error.response?.status);
+    console.error('Data:', JSON.stringify(error.response?.data, null, 2));
+    console.error('Config used:', {
+      account_id: ZOOM_CONFIG.ACCOUNT_ID,
+      client_id: ZOOM_CONFIG.CLIENT_ID,
+      url: 'https://zoom.us/oauth/token'
+    });
     throw error;
   }
 }

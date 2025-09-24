@@ -44,8 +44,10 @@ app.post('/api/webhooks/zoom', (req, res) => {
   try {
     const event = req.body;
     
-    console.log('📅 Zoom webhook event received:', event.event);
-    console.log('Event data:', JSON.stringify(event, null, 2));
+    console.log('📅 POST request to webhook endpoint');
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('Body:', JSON.stringify(event, null, 2));
+    console.log('Event type:', event.event);
     
     // Handle different event types
     switch (event.event) {
@@ -55,10 +57,9 @@ app.post('/api/webhooks/zoom', (req, res) => {
         const plainToken = event.payload?.plainToken;
         if (plainToken) {
           console.log('📤 Responding with plainToken:', plainToken);
-          return res.status(200).json({
-            plainToken: plainToken,
-            encryptedToken: plainToken // Some Zoom apps expect this
-          });
+          // Try different response formats that Zoom might expect
+          res.set('Content-Type', 'application/json');
+          return res.status(200).send(plainToken); // Some apps expect just the token as string
         }
         break;
         

@@ -17,6 +17,60 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Zoom webhook verification (GET request)
+app.get('/api/webhooks/zoom', (req, res) => {
+  const challenge = req.query.challenge;
+  
+  if (challenge) {
+    console.log('📞 Zoom webhook verification request received');
+    res.status(200).json({
+      challenge: challenge
+    });
+  } else {
+    res.status(400).json({ error: 'No challenge parameter provided' });
+  }
+});
+
+// Zoom webhook events handler (POST request)
+app.post('/api/webhooks/zoom', (req, res) => {
+  try {
+    const event = req.body;
+    
+    console.log('📅 Zoom webhook event received:', event.event);
+    console.log('Event data:', JSON.stringify(event, null, 2));
+    
+    // Handle different event types
+    switch (event.event) {
+      case 'meeting.started':
+        console.log('🟢 Meeting started:', event.payload?.object?.id);
+        break;
+        
+      case 'meeting.ended':
+        console.log('🔴 Meeting ended:', event.payload?.object?.id);
+        break;
+        
+      case 'meeting.participant_joined':
+        const joinedParticipant = event.payload?.object?.participant;
+        console.log('👋 Participant joined:', joinedParticipant?.user_name, joinedParticipant?.email);
+        break;
+        
+      case 'meeting.participant_left':
+        const leftParticipant = event.payload?.object?.participant;
+        console.log('👋 Participant left:', leftParticipant?.user_name, leftParticipant?.email);
+        break;
+        
+      default:
+        console.log('⚠️ Unhandled event type:', event.event);
+    }
+    
+    res.status(200).json({ received: true });
+    
+  } catch (error) {
+    console.error('❌ Error processing Zoom webhook:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Health check
 app.get('/health', async (req, res) => {
   try {

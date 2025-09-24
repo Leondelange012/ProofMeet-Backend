@@ -21,13 +21,21 @@ app.use(express.json());
 app.get('/api/webhooks/zoom', (req, res) => {
   const challenge = req.query.challenge;
   
+  console.log('📞 GET request to webhook endpoint');
+  console.log('Query params:', req.query);
+  console.log('Headers:', req.headers);
+  
   if (challenge) {
-    console.log('📞 Zoom webhook verification request received');
+    console.log('📞 Zoom webhook verification request received with challenge:', challenge);
     res.status(200).json({
       challenge: challenge
     });
   } else {
-    res.status(400).json({ error: 'No challenge parameter provided' });
+    console.log('📞 GET request without challenge - returning basic response');
+    res.status(200).json({ 
+      status: 'Webhook endpoint is active',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -43,7 +51,15 @@ app.post('/api/webhooks/zoom', (req, res) => {
     switch (event.event) {
       case 'endpoint.url_validation':
         console.log('✅ Zoom endpoint validation successful');
-        // For validation events, we just need to respond with 200
+        // For validation events, Zoom expects us to echo back the plainToken
+        const plainToken = event.payload?.plainToken;
+        if (plainToken) {
+          console.log('📤 Responding with plainToken:', plainToken);
+          return res.status(200).json({
+            plainToken: plainToken,
+            encryptedToken: plainToken // Some Zoom apps expect this
+          });
+        }
         break;
         
       case 'meeting.started':

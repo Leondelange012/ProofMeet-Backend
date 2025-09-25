@@ -19,6 +19,7 @@ const ZOOM_CONFIG = {
 // Generate Zoom API Access Token
 async function getZoomAccessToken() {
   try {
+    // Try the standard Server-to-Server OAuth endpoint first
     const response = await axios.post('https://zoom.us/oauth/token', 
       new URLSearchParams({
         'grant_type': 'account_credentials',

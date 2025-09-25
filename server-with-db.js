@@ -448,9 +448,9 @@ app.get('/api/zoom/test', async (req, res) => {
   try {
     const accessToken = await getZoomAccessToken();
     
-    // Test API call to get user info
+    // Test API call - just verify the token works
     const response = await axios.get(
-      `${ZOOM_CONFIG.API_BASE_URL}/users/me`,
+      `${ZOOM_CONFIG.API_BASE_URL}/accounts/${ZOOM_CONFIG.ACCOUNT_ID}`,
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -462,9 +462,10 @@ app.get('/api/zoom/test', async (req, res) => {
       success: true,
       message: 'Zoom API connection successful',
       data: {
-        userEmail: response.data.email,
-        accountId: response.data.account_id,
-        status: 'Connected'
+        accountId: response.data.id || ZOOM_CONFIG.ACCOUNT_ID,
+        accountName: response.data.account_name || 'ProofMeet Account',
+        status: 'Connected',
+        tokenValid: true
       }
     });
     

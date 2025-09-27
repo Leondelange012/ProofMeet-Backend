@@ -443,6 +443,46 @@ app.get('/api/meetings/host/:hostId', async (req, res) => {
   }
 });
 
+// Get all active meetings (for participants)
+app.get('/api/meetings/all', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status = 'active' } = req.query;
+    
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        isActive: status === 'active'
+      },
+      include: {
+        host: {
+          select: { email: true, courtId: true }
+        }
+      },
+      orderBy: {
+        scheduledFor: 'desc'
+      },
+      skip: (page - 1) * limit,
+      take: parseInt(limit)
+    });
+    
+    res.json({
+      success: true,
+      data: meetings,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: meetings.length
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching all meetings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch all meetings'
+    });
+  }
+});
+
 // Test Zoom API connection
 app.get('/api/zoom/test', async (req, res) => {
   try {

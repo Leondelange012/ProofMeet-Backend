@@ -269,7 +269,7 @@ app.post('/api/auth/verify', async (req, res) => {
 
 // Login user
 app.post('/api/auth/login', async (req, res) => {
-  const { email } = req.body;
+  const { email, password } = req.body;
   
   try {
     const user = await prisma.user.findUnique({
@@ -277,6 +277,15 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
     if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
+    
+    // For demo purposes, check if password is 'password123'
+    // In production, this would be properly hashed and compared
+    if (password !== 'password123') {
       return res.status(401).json({
         success: false,
         error: 'Invalid credentials'
@@ -479,6 +488,81 @@ app.get('/api/meetings/all', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch all meetings'
+    });
+  }
+});
+
+// Delete a meeting
+app.delete('/api/meetings/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const meeting = await prisma.meeting.findUnique({
+      where: { id }
+    });
+    
+    if (!meeting) {
+      return res.status(404).json({
+        success: false,
+        error: 'Meeting not found'
+      });
+    }
+    
+    await prisma.meeting.delete({
+      where: { id }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Meeting deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error deleting meeting:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete meeting'
+    });
+  }
+});
+
+// Update a meeting
+app.put('/api/meetings/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, scheduledFor, duration } = req.body;
+    
+    const meeting = await prisma.meeting.findUnique({
+      where: { id }
+    });
+    
+    if (!meeting) {
+      return res.status(404).json({
+        success: false,
+        error: 'Meeting not found'
+      });
+    }
+    
+    const updatedMeeting = await prisma.meeting.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        scheduledFor: new Date(scheduledFor),
+        duration: parseInt(duration)
+      }
+    });
+    
+    res.json({
+      success: true,
+      data: updatedMeeting
+    });
+    
+  } catch (error) {
+    console.error('❌ Error updating meeting:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update meeting'
     });
   }
 });

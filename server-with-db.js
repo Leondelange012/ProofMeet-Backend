@@ -224,6 +224,7 @@ app.post('/api/auth/register', async (req, res) => {
       });
     }
     
+    // Create new user with current schema (temporary until migration)
     const user = await prisma.user.create({
       data: {
         email,
@@ -231,13 +232,12 @@ app.post('/api/auth/register', async (req, res) => {
         state,
         courtCaseNumber,
         isHost: isHost || false,
-        firstName,
-        lastName,
-        phoneNumber,
-        dateOfBirth,
         isVerified: false // Requires court verification
       }
     });
+    
+    console.log(`✅ User registered: ${email} (${isHost ? 'Host' : 'Participant'})`);
+    console.log(`📝 Additional info: ${firstName} ${lastName}, ${phoneNumber}, ${dateOfBirth}`);
     
     res.status(201).json({
       success: true,

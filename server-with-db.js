@@ -224,7 +224,11 @@ app.post('/api/auth/register', async (req, res) => {
       });
     }
     
-    // Create new user with current schema (temporary until migration)
+    console.log(`📝 Registration attempt for: ${email}`);
+    console.log(`📝 User type: ${isHost ? 'Host' : 'Participant'}`);
+    console.log(`📝 Additional info received: ${firstName} ${lastName}, ${phoneNumber}, ${dateOfBirth}`);
+    
+    // Create new user with current schema (only fields that exist in DB)
     const user = await prisma.user.create({
       data: {
         email,
@@ -236,8 +240,10 @@ app.post('/api/auth/register', async (req, res) => {
       }
     });
     
-    console.log(`✅ User registered: ${email} (${isHost ? 'Host' : 'Participant'})`);
-    console.log(`📝 Additional info: ${firstName} ${lastName}, ${phoneNumber}, ${dateOfBirth}`);
+    console.log(`✅ User registered successfully: ${email} (ID: ${user.id})`);
+    
+    // TODO: Store additional fields (firstName, lastName, phoneNumber, dateOfBirth) 
+    // when database migration is applied
     
     res.status(201).json({
       success: true,
@@ -250,10 +256,15 @@ app.post('/api/auth/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('❌ Registration error:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    });
     res.status(500).json({
       success: false,
-      error: 'Registration failed'
+      error: 'Registration failed: ' + error.message
     });
   }
 });

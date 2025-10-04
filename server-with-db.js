@@ -199,7 +199,17 @@ app.get('/health', async (req, res) => {
 
 // Register user
 app.post('/api/auth/register', async (req, res) => {
-  const { email, courtId, state, courtCaseNumber } = req.body;
+  const { 
+    email, 
+    courtId, 
+    state, 
+    courtCaseNumber, 
+    isHost, 
+    firstName, 
+    lastName, 
+    phoneNumber, 
+    dateOfBirth 
+  } = req.body;
   
   try {
     // Check if user already exists
@@ -220,8 +230,12 @@ app.post('/api/auth/register', async (req, res) => {
         courtId,
         state,
         courtCaseNumber,
-        isVerified: false,
-        isHost: email.includes('host')
+        isHost: isHost || false,
+        firstName,
+        lastName,
+        phoneNumber,
+        dateOfBirth,
+        isVerified: false // Requires court verification
       }
     });
     

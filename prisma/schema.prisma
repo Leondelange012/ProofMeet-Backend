@@ -13,11 +13,18 @@ datasource db {
 model User {
   id                String    @id @default(cuid())
   email             String    @unique
+  firstName         String?
+  lastName          String?
+  phoneNumber       String?
+  dateOfBirth       String?
   courtId           String
   state             String
   courtCaseNumber   String
   isVerified        Boolean   @default(false)
   isHost            Boolean   @default(false)
+  accountStatus     AccountStatus @default(PENDING)
+  emailVerified     Boolean   @default(false)
+  emailVerificationToken String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -86,4 +93,13 @@ model AuthToken {
 enum AttendanceType {
   ONLINE
   IN_PERSON
+}
+
+enum AccountStatus {
+  PENDING
+  EMAIL_VERIFIED
+  COURT_APPROVED
+  ACTIVE
+  SUSPENDED
+  REJECTED
 }

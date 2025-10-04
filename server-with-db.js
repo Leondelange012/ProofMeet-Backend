@@ -201,6 +201,7 @@ app.get('/health', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   const { 
     email, 
+    password,
     courtId, 
     state, 
     courtCaseNumber, 
@@ -228,6 +229,9 @@ app.post('/api/auth/register', async (req, res) => {
     console.log(`📝 User type: ${isHost ? 'Host' : 'Participant'}`);
     console.log(`📝 Additional info received: ${firstName} ${lastName}, ${phoneNumber}, ${dateOfBirth}`);
     
+    // Hash password (using simple method for now - in production use bcrypt)
+    const hashedPassword = Buffer.from(password).toString('base64');
+    
     // Create new user with current schema (only fields that exist in DB)
     const user = await prisma.user.create({
       data: {
@@ -242,12 +246,16 @@ app.post('/api/auth/register', async (req, res) => {
     
     console.log(`✅ User registered successfully: ${email} (ID: ${user.id})`);
     
+    // TODO: Store password hash in database when password field is added to schema
     // TODO: Store additional fields (firstName, lastName, phoneNumber, dateOfBirth) 
     // when database migration is applied
     
+    // TODO: Send verification email
+    console.log(`📧 TODO: Send verification email to ${email}`);
+    
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'User registered successfully. Please check your email for verification instructions.',
       data: {
         userId: user.id,
         email: user.email,

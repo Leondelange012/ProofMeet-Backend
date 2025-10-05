@@ -197,6 +197,9 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// Temporary password storage (TODO: store in database)
+const userPasswords = new Map();
+
 // Register user
 app.post('/api/auth/register', async (req, res) => {
   const { 
@@ -240,9 +243,12 @@ app.post('/api/auth/register', async (req, res) => {
         state,
         courtCaseNumber,
         isHost: isHost || false,
-        isVerified: false // Requires court verification
+        isVerified: true // Auto-activate for testing (TODO: require email verification)
       }
     });
+    
+    // Store password temporarily (TODO: store in database)
+    userPasswords.set(email, hashedPassword);
     
     console.log(`✅ User registered successfully: ${email} (ID: ${user.id})`);
     
@@ -255,7 +261,7 @@ app.post('/api/auth/register', async (req, res) => {
     
     res.status(201).json({
       success: true,
-      message: 'User registered successfully. Please check your email for verification instructions.',
+      message: 'Registration successful! You can now log in with your credentials.',
       data: {
         userId: user.id,
         email: user.email,
@@ -316,9 +322,23 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
     
-    // For demo purposes, check if password is 'password123'
-    // In production, this would be properly hashed and compared
-    if (password !== 'password123') {
+    // Check password from temporary storage or fallback to demo password
+    const storedPasswordHash = userPasswords.get(email);
+    const providedPasswordHash = Buffer.from(password).toString('base64');
+    
+    let passwordValid = false;
+    
+    if (storedPasswordHash) {
+      // Use stored password from registration
+      passwordValid = storedPasswordHash === providedPasswordHash;
+      console.log(`🔐 Using registered password for ${email}`);
+    } else {
+      // Fallback to demo password for existing test users
+      passwordValid = password === 'password123';
+      console.log(`🔐 Using demo password for ${email}`);
+    }
+    
+    if (!passwordValid) {
       return res.status(401).json({
         success: false,
         error: 'Invalid credentials'

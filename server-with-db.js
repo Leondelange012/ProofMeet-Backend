@@ -724,20 +724,22 @@ async function initializeTestUsers() {
   try {
     const testUsers = [
       {
-        email: 'participant1@example.com',
-        courtId: 'CA-12345',
+        email: 'tester.participant@proofmeet.com',
+        courtId: 'CA-TEST-001',
         state: 'CA',
-        courtCaseNumber: 'CASE-2024-001',
+        courtCaseNumber: 'CASE-2024-DEMO',
         isHost: false,
-        isVerified: true
+        isVerified: true,
+        password: 'password123'
       },
       {
-        email: 'host1@example.com',
-        courtId: 'CA-HOST-001',
-        state: 'CA',
-        courtCaseNumber: 'HOST-2024-001',
+        email: 'tester.host@proofmeet.com',
+        courtId: 'CA-TEST-HOST',
+        state: 'CA', 
+        courtCaseNumber: 'HOST-2024-DEMO',
         isHost: true,
-        isVerified: true
+        isVerified: true,
+        password: 'password123'
       }
     ];
 
@@ -747,12 +749,36 @@ async function initializeTestUsers() {
       });
 
       if (!existingUser) {
-        await prisma.user.create({
-          data: userData
+        // Create user in database
+        const user = await prisma.user.create({
+          data: {
+            email: userData.email,
+            courtId: userData.courtId,
+            state: userData.state,
+            courtCaseNumber: userData.courtCaseNumber,
+            isHost: userData.isHost,
+            isVerified: userData.isVerified
+          }
         });
-        console.log(`✅ Created test user: ${userData.email}`);
+        
+        // Store password in temporary storage
+        const hashedPassword = Buffer.from(userData.password).toString('base64');
+        userPasswords.set(userData.email, hashedPassword);
+        
+        console.log(`✅ Created test ${userData.isHost ? 'host' : 'participant'}: ${userData.email}`);
+      } else {
+        // Ensure password is in temporary storage for existing users
+        const hashedPassword = Buffer.from(userData.password).toString('base64');
+        userPasswords.set(userData.email, hashedPassword);
+        
+        console.log(`ℹ️  Test ${userData.isHost ? 'host' : 'participant'} already exists: ${userData.email}`);
       }
     }
+    
+    console.log('🎯 Test accounts ready for testers:');
+    console.log('   📧 Participant: tester.participant@proofmeet.com (password: password123)');
+    console.log('   📧 Host: tester.host@proofmeet.com (password: password123)');
+    
   } catch (error) {
     console.error('Error initializing test users:', error);
   }

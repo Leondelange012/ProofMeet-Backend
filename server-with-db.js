@@ -682,6 +682,43 @@ app.get('/api/zoom/test-meeting', async (req, res) => {
   }
 });
 
+// Test endpoint to clear all users and data (for development only)
+app.delete('/api/admin/clear-database', async (req, res) => {
+  try {
+    console.log('🧹 Clearing database for fresh testing...');
+    
+    // Delete in order to respect foreign key constraints
+    await prisma.attendanceRecord.deleteMany({});
+    console.log('✅ Cleared attendance records');
+    
+    await prisma.authToken.deleteMany({});
+    console.log('✅ Cleared auth tokens');
+    
+    await prisma.meeting.deleteMany({});
+    console.log('✅ Cleared meetings');
+    
+    await prisma.user.deleteMany({});
+    console.log('✅ Cleared users');
+    
+    // Clear temporary password storage
+    userPasswords.clear();
+    console.log('✅ Cleared temporary passwords');
+    
+    console.log('🎉 Database cleared successfully!');
+    
+    res.json({
+      success: true,
+      message: 'Database cleared successfully. You can now register with fresh accounts.'
+    });
+  } catch (error) {
+    console.error('❌ Database clear error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear database: ' + error.message
+    });
+  }
+});
+
 // Initialize test users
 async function initializeTestUsers() {
   try {
